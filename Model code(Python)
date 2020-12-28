@@ -1,0 +1,86 @@
+/model code/
+
+#importing libraries
+import os
+from keras.preprocessing import image
+import matplotlib.pyplot as plt 
+import numpy as np
+from keras.utils.np_utils import to_categorical
+import random,shutil
+from keras.models import Sequential
+from keras.layers import Dropout,Conv2D,Flatten,Dense, MaxPooling2D, BatchNormalization
+from keras.models import load_model
+
+
+#creating a directory for generating function
+def generator(dir, gen=image.ImageDataGenerator(rescale=1./255), 
+              shuffle=True,batch_size=1,target_size=(24,24),
+              class_mode='categorical'):
+
+    return gen.flow_from_directory(dir,batch_size=batch_size,
+                                   shuffle=shuffle,color_mode='grayscale',
+                                   class_mode=class_mode,
+                                   target_size=target_size)
+os.chdir(r'C:/Users/PRANEETH KUMAR/openclose')
+
+
+#training data and testing data
+BS= 32
+TS=(24,24)
+train_batch= generator('C:/Users/PRANEETH KUMAR/openclose/train',
+                       shuffle=True,batch_size=BS,target_size=TS)
+valid_batch= generator('C:/Users/PRANEETH KUMAR/openclose/test',
+                       shuffle=True,batch_size=BS,target_size=TS)
+SPE= len(train_batch.classes)//BS
+VS = len(valid_batch.classes)//BS
+print(SPE,VS)
+
+
+#creating modelusing CNN
+model =Sequential()
+#32 convolution filters used each of size 3x3 
+model.add(Conv2D(32, kernel_size=(3, 3), activation='relu', input_shape=(24,24,1))) 
+#choose the best features via pooling
+model.add(MaxPooling2D(pool_size=(1,1)))
+model.add(Conv2D(32,(3,3),activation='relu'))
+model.add(MaxPooling2D(pool_size=(1,1)))
+#64 convolution filters used each of size 3x3
+model.add(Conv2D(64,(3,3),activation='relu'))
+model.add(MaxPooling2D(pool_size=(1,1)))
+#randomly turn neurons on and off to improve convergence
+model.add(Dropout(0.25))
+#flatten since too many dimensions, we only want a classification output
+model.add(Flatten())
+#flatten since too many dimensions, we only want a classification output
+model.add(Dense(128, activation='relu'))
+#one more dropout for convergence' sake
+model.add(Dropout(0.5))
+#output a softmax to squash the matrix into output probabilities
+model.add(Dense(2, activation='softmax'))
+model.summary()
+
+
+model.compile(optimizer='adam',loss='categorical_crossentropy',metrics=['accuracy'])
+
+history=model.fit_generator(train_batch, validation_data=valid_batch,epochs=100,
+                            steps_per_epoch=202 ,validation_steps=94)
+
+
+# summarize history for accuracy
+plt.plot(history.history['acc'])
+plt.plot(history.history['val_acc'])
+plt.title('model accuracy')
+plt.ylabel('accuracy')
+plt.xlabel('epoch')
+plt.legend(['train', 'test'], loc='upper left')
+plt.show()
+
+
+# summarize history for loss
+plt.plot(history.history['loss'])
+plt.plot(history.history['val_loss'])
+plt.title('model loss')
+plt.ylabel('loss')
+plt.xlabel('epoch')
+plt.legend(['train', 'test'], loc='upper left')
+plt.show()
